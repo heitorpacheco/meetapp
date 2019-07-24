@@ -78,6 +78,12 @@ class MeetupController {
   async destroy(req, res) {
     const meetup = await Meetup.findByPk(req.params.id);
 
+    if (isBefore(parseISO(meetup.date), new Date())) {
+      return res
+        .status(400)
+        .json({ error: 'Você não pode excluir um evento que já ocorreu.' });
+    }
+
     await meetup.destroy();
 
     return res.json({ Message: 'Registro Removido' });
