@@ -1,15 +1,37 @@
-import { isBefore, parseISO } from 'date-fns';
+import { isAfter, isBefore, parseISO } from 'date-fns';
 import Meetup from '../models/Meetup';
 
 class MeetupController {
+  async index(req, res) {
+    const meetups = await Meetup.findAll({
+      where: { user_id: req.userId },
+    });
+
+    const getMeetups = meetups.map(meet => {
+      const { id, title, description, location, date } = meet;
+
+      return {
+        id,
+        title,
+        description,
+        location,
+        availableUpdate: isAfter(date, new Date()),
+      };
+    });
+
+    return res.json(getMeetups);
+  }
+
   async store(req, res) {
-    const { title, description, location, date, user_id, file_id } = req.body;
+    const { title, description, location, date, file_id } = req.body;
 
     if (isBefore(parseISO(date), new Date())) {
       return res
         .status(400)
         .json({ error: 'Datas anteriores não são permitidas' });
     }
+
+    const user_id = req.userId;
 
     const meetup = await Meetup.create({
       title,
@@ -21,6 +43,44 @@ class MeetupController {
     });
 
     return res.json(meetup);
+  }
+
+  async update(req, res) {
+    const { id } = req.params;
+    const meetups = await Meetup.findOne({
+      where: { id },
+    });
+
+    if (!(meetups.user_id === req.userId)) {
+      return res
+        .status(400)
+        .json({ error: 'Você não é organizador desse evento.' });
+    }
+
+    if (isBefore(parseISO(meetups.date), new Date())) {
+      return res
+        .status(400)
+        .json({ error: 'Você não pode alterar um evento de data passada.' });
+    }
+
+    const { title, description, location, date } = await meetups.update(
+      req.body
+    );
+
+    return res.json({
+      title,
+      description,
+      location,
+      date,
+    });
+  }
+
+  async destroy(req, res) {
+    const meetup = await Meetup.findByPk(req.params.id);
+
+    await meetup.destroy();
+
+    return res.json({ Message: 'Registro Removido' });
   }
 }
 
