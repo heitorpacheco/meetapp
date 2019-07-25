@@ -15,6 +15,7 @@ class MeetupController {
         title,
         description,
         location,
+        date,
         availableUpdate: isAfter(date, new Date()),
       };
     });
