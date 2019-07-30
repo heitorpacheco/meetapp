@@ -1,27 +1,49 @@
-import { isAfter, isBefore, parseISO } from 'date-fns';
+import { isBefore, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { Op } from 'sequelize';
 import * as Yup from 'yup';
 import Meetup from '../models/Meetup';
+import User from '../models/User';
 
 class MeetupController {
   async index(req, res) {
-    const meetups = await Meetup.findAll({
-      where: { user_id: req.userId },
-    });
+    // const meetups = await Meetup.findAll({
+    //   where: { user_id: req.userId },
+    // });
 
-    const getMeetups = meetups.map(meet => {
-      const { id, title, description, location, date } = meet;
+    // const getMeetups = meetups.map(meet => {
+    //   const { id, title, description, location, date } = meet;
 
-      return {
-        id,
-        title,
-        description,
-        location,
-        date,
-        availableUpdate: isAfter(date, new Date()),
+    //   return {
+    //     id,
+    //     title,
+    //     description,
+    //     location,
+    //     date,
+    //     availableUpdate: isAfter(date, new Date()),
+    //   };
+    // });
+
+    // return res.json(getMeetups);
+
+    const where = {};
+    const page = req.query.page || 1;
+
+    if (req.query.date) {
+      const searchDate = parseISO(req.query.date);
+
+      where.date = {
+        [Op.between]: [startOfDay(searchDate), endOfDay(searchDate)],
       };
+    }
+
+    const meetups = await Meetup.findAll({
+      where,
+      include: [User],
+      limit: 10,
+      offset: 10 * page - 10,
     });
 
-    return res.json(getMeetups);
+    return res.json(meetups);
   }
 
   async store(req, res) {

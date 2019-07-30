@@ -6,6 +6,9 @@ import Meetup from '../models/Meetup';
 class SubscriptionController {
   async index(req, res) {
     const subscription = await Subscription.findAll({
+      where: {
+        user_id: req.userId,
+      },
       include: [User],
     });
 
